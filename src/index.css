@@ -4,41 +4,42 @@
   /* Fonts */
   --font-primary: 'Plus Jakarta Sans', sans-serif;
   
-  /* Bright AI & Child-Friendly Colors (based on Logo Blue & Green) */
-  --color-bg-dark: #070e20;
-  --color-primary: #0066ff;       /* Electric AI Blue */
-  --color-primary-light: #33a3ff; /* Sky Blue */
-  --color-secondary: #00c285;     /* Emerald Sport Green */
-  --color-secondary-light: #39e6a0; /* Bright Mint Green */
-  --color-accent: #ffd700;        /* Playful Gold */
-  --color-accent-pink: #ff3385;   /* Playful Pink for AI neon look */
+  /* Very Light Brand Theme (Derived from Logo colors) */
+  --color-bg-dark: #f5f8fc;         /* Extremely soft light blue-gray */
+  --color-primary: #004fb6;         /* Logo Royal Blue */
+  --color-primary-light: #007cff;   /* Bright Electric Blue */
+  --color-secondary: #009e7a;       /* Logo Emerald Green */
+  --color-secondary-light: #00c298; /* Mint Green */
+  --color-accent: #f59e0b;          /* Soft Gold/Amber */
   
-  /* Text and Card states */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #9cb3e0;
-  --color-text-muted: #627ca3;
-  --color-bg-card: rgba(16, 29, 61, 0.6);
-  --color-bg-card-hover: rgba(22, 42, 87, 0.8);
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-hover: rgba(255, 255, 255, 0.25);
+  /* High-Contrast Light-Mode Text */
+  --color-text-primary: #0f172a;    /* Deep Slate/Navy */
+  --color-text-secondary: #475569;  /* Cool Gray */
+  --color-text-muted: #64748b;      /* Muted Gray */
+  
+  /* Clean White Glassmorphism Cards */
+  --color-bg-card: rgba(255, 255, 255, 0.75);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.95);
+  --color-border: rgba(0, 79, 182, 0.08);
+  --color-border-hover: rgba(0, 79, 182, 0.18);
   
   /* UI states */
-  --color-success: #00e676;
-  --color-error: #ff1744;
-  --color-warning: #ffea00;
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
   
-  /* Rounded Bubbly & AI Glow Shadows */
+  /* Bubbly & Soft Shadows */
   --border-radius-sm: 12px;
   --border-radius-md: 20px;
   --border-radius-lg: 32px;
   --transition-bounce: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
-  --shadow-glow-blue: 0 0 25px rgba(0, 102, 255, 0.3);
-  --shadow-glow-green: 0 0 25px rgba(0, 194, 133, 0.3);
-  --shadow-glow-pink: 0 0 25px rgba(255, 51, 133, 0.3);
+  /* Premium Soft Glows */
+  --shadow-glow-blue: 0 10px 30px rgba(0, 79, 182, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-glow-green: 0 10px 30px rgba(0, 194, 133, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-/* Global resets & animations */
+/* Global resets & background */
 * {
   margin: 0;
   padding: 0;
@@ -53,9 +54,8 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
   background-image: 
-    radial-gradient(circle at 5% 15%, rgba(0, 102, 255, 0.18) 0%, transparent 35%),
-    radial-gradient(circle at 95% 85%, rgba(0, 194, 133, 0.18) 0%, transparent 35%),
-    radial-gradient(circle at 50% 50%, rgba(255, 51, 133, 0.06) 0%, transparent 45%);
+    radial-gradient(circle at 10% 20%, rgba(0, 79, 182, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(0, 194, 133, 0.05) 0%, transparent 40%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
@@ -68,54 +68,51 @@ body {
   width: 100%;
 }
 
-/* Bubbly Gradient Titles */
+/* Clean Gradient Titles */
 .text-gradient-ai {
-  background: linear-gradient(135deg, #ffffff 10%, var(--color-primary-light) 50%, var(--color-secondary-light) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 60%, var(--color-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 8px rgba(0, 102, 255, 0.2));
 }
 
 .text-gradient-playful {
-  background: linear-gradient(135deg, #ffd700 0%, #ff3385 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Bubbly Glass Cards with AI floating animations */
+/* White Glass Cards */
 .glass-card {
   background: var(--color-bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 2px solid var(--color-border);
   border-radius: var(--border-radius-md);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
   transition: var(--transition-bounce);
 }
 
 .glass-card:hover {
-  transform: translateY(-8px) scale(1.02);
+  transform: translateY(-6px) scale(1.01);
   border-color: var(--color-border-hover);
   background: var(--color-bg-card-hover);
   box-shadow: var(--shadow-glow-blue);
 }
 
-/* Glowing sports category badge */
+/* Glow Badges */
 .badge-glow-blue {
-  background: rgba(0, 102, 255, 0.15);
-  color: var(--color-primary-light);
-  border: 1px solid rgba(0, 102, 255, 0.3);
-  box-shadow: var(--shadow-glow-blue);
+  background: rgba(0, 124, 255, 0.08);
+  color: var(--color-primary);
+  border: 1px solid rgba(0, 124, 255, 0.2);
 }
 
 .badge-glow-green {
-  background: rgba(0, 194, 133, 0.15);
-  color: var(--color-secondary-light);
-  border: 1px solid rgba(0, 194, 133, 0.3);
-  box-shadow: var(--shadow-glow-green);
+  background: rgba(0, 158, 122, 0.08);
+  color: var(--color-secondary);
+  border: 1px solid rgba(0, 158, 122, 0.2);
 }
 
-/* Playful bouncy buttons */
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -123,7 +120,7 @@ body {
   gap: 10px;
   padding: 14px 32px;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.95rem;
   border-radius: var(--border-radius-lg);
   border: none;
   cursor: pointer;
@@ -136,27 +133,27 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   color: #ffffff;
-  box-shadow: 0 6px 20px rgba(0, 102, 255, 0.4);
+  box-shadow: 0 6px 16px rgba(0, 79, 182, 0.2);
 }
 
 .btn-primary:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 30px rgba(0, 102, 255, 0.6), var(--shadow-glow-blue);
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 10px 24px rgba(0, 79, 182, 0.35);
 }
 
 .btn-primary:active {
-  transform: translateY(-1px) scale(1.01);
+  transform: translateY(-1px) scale(0.99);
 }
 
 .btn-secondary {
   background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-light) 100%);
   color: #ffffff;
-  box-shadow: 0 6px 20px rgba(0, 194, 133, 0.4);
+  box-shadow: 0 6px 16px rgba(0, 158, 122, 0.2);
 }
 
 .btn-secondary:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 30px rgba(0, 194, 133, 0.6), var(--shadow-glow-green);
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 10px 24px rgba(0, 158, 122, 0.35);
 }
 
 .btn-outline {
@@ -166,8 +163,8 @@ body {
 }
 
 .btn-outline:hover {
-  border-color: var(--color-primary-light);
-  background: rgba(0, 102, 255, 0.08);
+  border-color: var(--color-primary);
+  background: rgba(0, 79, 182, 0.04);
   transform: translateY(-3px);
 }
 
@@ -178,7 +175,7 @@ body {
 
 .form-label {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 800;
   margin-bottom: 10px;
   color: var(--color-text-secondary);
@@ -188,11 +185,11 @@ body {
 .form-control {
   width: 100%;
   padding: 14px 20px;
-  background: rgba(8, 17, 38, 0.9);
+  background: rgba(255, 255, 255, 0.9);
   border: 2px solid var(--color-border);
   border-radius: var(--border-radius-sm);
   color: var(--color-text-primary);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   transition: var(--transition-bounce);
 }
@@ -200,15 +197,15 @@ body {
 .form-control:focus {
   outline: none;
   border-color: var(--color-primary-light);
-  box-shadow: var(--shadow-glow-blue);
-  background: rgba(12, 26, 56, 0.95);
+  box-shadow: 0 0 0 4px rgba(0, 124, 255, 0.1);
+  background: #ffffff;
   transform: scale(1.01);
 }
 
 /* Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(2deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
 }
 
 .animate-float {
@@ -216,21 +213,16 @@ body {
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.5; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-  100% { transform: scale(0.95); opacity: 0.5; }
+  0% { transform: scale(0.97); opacity: 0.7; }
+  50% { transform: scale(1.03); opacity: 0.9; }
+  100% { transform: scale(0.97); opacity: 0.7; }
 }
 
 .pulse-glow-secondary {
   animation: pulse-ring 2.5s infinite ease-in-out;
 }
 
-/* Media Queries */
-@media (max-width: 768px) {
-  .container {
-    padding: 0 16px;
-  }
-  .btn {
-    padding: 12px 24px;
-  }
+/* Print Overrides */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
 }
