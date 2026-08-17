@@ -217,19 +217,13 @@ function AppContent() {
               </div>
             )}
           </div>
-          <div>
-            <span style={{
-              fontSize: '0.85rem',
-              background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 194, 133, 0.1) 100%)',
-              color: 'var(--color-primary)',
-              padding: '8px 16px',
-              borderRadius: '24px',
-              fontWeight: 800,
-              border: '2px solid rgba(0, 102, 255, 0.15)',
-              boxShadow: '0 2px 10px rgba(0, 102, 255, 0.05)'
-            }}>
-              ⭐ Professional League Portal
-            </span>
+          <div style={{
+            fontSize: '0.9rem',
+            color: 'var(--color-primary)',
+            fontWeight: 700,
+            letterSpacing: '0.2px'
+          }}>
+            Stadium Roster Registrations Open
           </div>
         </div>
       </header>
