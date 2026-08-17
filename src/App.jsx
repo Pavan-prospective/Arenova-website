@@ -862,30 +862,29 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="glass-card" style={{
+      <footer style={{
         marginTop: 'auto',
-        borderWidth: '2px 0 0 0',
-        borderRadius: 0,
-        background: 'rgba(7, 14, 32, 0.95)',
-        padding: '36px 0',
-        fontSize: '0.9rem',
-        color: 'var(--color-text-muted)',
-        borderTop: '2px solid rgba(255, 255, 255, 0.05)'
+        background: '#ffffff',
+        padding: '16px 0',
+        fontSize: '0.8rem',
+        color: 'var(--color-text-secondary)',
+        borderTop: '1px solid rgba(0, 0, 0, 0.06)'
       }}>
         <div className="container" style={{
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           alignItems: 'center',
-          gap: '16px',
-          textAlign: 'center'
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
         }}>
           <div>
             <strong>ARENOVA SPORTS STADIUM LEAGUE</strong> &copy; {new Date().getFullYear()}. All rights reserved.
           </div>
-          <div style={{ display: 'flex', gap: '16px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-            <a href="#" style={{ color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); alert("SSL billing gateway verified by top banks."); }}>Security Gateway</a>
+          <div style={{ display: 'flex', gap: '16px', fontWeight: 600 }}>
+            <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); alert("SSL billing gateway verified by top banks."); }}>Security Gateway</a>
             <span>•</span>
-            <a href="#" style={{ color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); alert("Drop an email at support@arenova.in"); }}>Help & Support</a>
+            <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); alert("Drop an email at support@arenova.in"); }}>Help & Support</a>
           </div>
         </div>
       </footer>
