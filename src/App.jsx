@@ -184,15 +184,13 @@ function AppContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {/* Header */}
-      <header className="glass-card" style={{
+      <header style={{
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        borderWidth: '0 0 2px 0',
-        borderRadius: 0,
-        background: 'rgba(7, 14, 32, 0.85)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '2px solid rgba(255, 255, 255, 0.05)'
+        background: '#ffffff',
+        borderBottom: '2px solid rgba(0, 0, 0, 0.06)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
       }}>
         <div className="container" style={{
           height: '80px',
@@ -205,11 +203,11 @@ function AppContent() {
               <img 
                 src={logoUrl} 
                 alt="Arenova Logo" 
-                style={{ height: '40px', objectFit: 'contain' }}
+                style={{ height: '48px', objectFit: 'contain' }}
               />
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.75rem', fontWeight: '900', letterSpacing: '1px' }}>
+                <span style={{ fontSize: '1.75rem', fontWeight: '900', letterSpacing: '1px', color: '#004fb6' }}>
                   ARE<span style={{ color: 'var(--color-secondary)' }}>NOVA</span>
                 </span>
               </div>
@@ -218,13 +216,13 @@ function AppContent() {
           <div>
             <span style={{
               fontSize: '0.85rem',
-              background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.2) 0%, rgba(0, 194, 133, 0.2) 100%)',
-              color: '#ffffff',
+              background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 194, 133, 0.1) 100%)',
+              color: 'var(--color-primary)',
               padding: '8px 16px',
               borderRadius: '24px',
               fontWeight: 800,
-              border: '2px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: 'var(--shadow-glow-blue)'
+              border: '2px solid rgba(0, 102, 255, 0.15)',
+              boxShadow: '0 2px 10px rgba(0, 102, 255, 0.05)'
             }}>
               🌟 AI-Powered Sports Arena
             </span>
