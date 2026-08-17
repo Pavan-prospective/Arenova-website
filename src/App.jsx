@@ -237,8 +237,7 @@ function AppContent() {
       {/* Main Body */}
       <main style={{ flex: 1, padding: '40px 0' }}>
         <div className="container animate-fade-in">
-          
-          {/* STEP 1: Separate Tournament Cards Grid */}
+             {/* STEP 1: Separate Tournament Cards Grid */}
           {step === 'list' && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -253,7 +252,8 @@ function AppContent() {
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                gap: '32px'
+                gap: '32px',
+                marginBottom: '80px'
               }}>
                 {TOURNAMENTS.map(t => (
                   <div key={t.id} className="glass-card" style={{
@@ -297,7 +297,7 @@ function AppContent() {
                     </div>
 
                     {/* Card details */}
-                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifycontent: 'space-between' }}>
                       <div>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '8px', color: '#0f172a' }}>{t.title}</h3>
                         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px', lineHeight: '1.5' }}>
@@ -331,6 +331,137 @@ function AppContent() {
                   </div>
                 ))}
               </div>
+
+              {/* ABOUT COMPANY SECTION */}
+              <div className="glass-card" style={{
+                padding: '48px',
+                marginBottom: '80px',
+                background: '#ffffff',
+                border: '1px solid rgba(0, 0, 0, 0.06)',
+                borderRadius: '16px'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', alignItems: 'center' }}>
+                  <div>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      background: 'rgba(0, 79, 182, 0.08)',
+                      color: 'var(--color-primary)',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontWeight: 800,
+                      letterSpacing: '0.5px'
+                    }}>
+                      OUR MISSION
+                    </span>
+                    <h2 style={{ fontSize: '2rem', fontWeight: '900', margin: '16px 0', color: '#0f172a', lineHeight: '1.2' }}>
+                      Redefining Amateur Stadium Tournaments
+                    </h2>
+                    <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.7', marginBottom: '16px' }}>
+                      Arenova is India's premier stadium sports network. We organize world-class physical tournament fixtures across legendary venues, bringing the absolute best professional sports production values to corporate leagues, working professionals, and club players.
+                    </p>
+                    <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.7' }}>
+                      Whether you are stepping onto the pitch at Wankhede under full stadium lights or playing at the central basketball courts, we provide certified referees, custom match jerseys, live scoring updates, and professional kitbags.
+                    </p>
+                  </div>
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(0, 79, 182, 0.02) 0%, rgba(0, 194, 133, 0.04) 100%)',
+                    padding: '32px',
+                    borderRadius: '16px',
+                    border: '1px dashed rgba(0, 79, 182, 0.15)'
+                  }}>
+                    <h4 style={{ fontWeight: '800', fontSize: '1.15rem', color: '#0f172a', marginBottom: '16px' }}>Why Compete with Arenova?</h4>
+                    <ul style={{ display: 'flex', flexDirection: 'column', gap: '16px', listStyle: 'none' }}>
+                      <li style={{ display: 'flex', gap: '12px', fontSize: '0.9rem', color: '#475569' }}>
+                        <span style={{ color: 'var(--color-secondary)', fontWeight: 900 }}>✓</span>
+                        <div><strong>Official Stadium Venues</strong>: Matches played only in premium national indoor/outdoor stadiums.</div>
+                      </li>
+                      <li style={{ display: 'flex', gap: '12px', fontSize: '0.9rem', color: '#475569' }}>
+                        <span style={{ color: 'var(--color-secondary)', fontWeight: 900 }}>✓</span>
+                        <div><strong>Certified Officiating</strong>: Neutral panels of qualified national and state referees.</div>
+                      </li>
+                      <li style={{ display: 'flex', gap: '12px', fontSize: '0.9rem', color: '#475569' }}>
+                        <span style={{ color: 'var(--color-secondary)', fontWeight: 900 }}>✓</span>
+                        <div><strong>Live Media Coverage</strong>: Pro-tier sports photographers and commentators live on site.</div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* CONTACT SECTION */}
+              <div className="glass-card" style={{
+                padding: '48px',
+                background: '#ffffff',
+                border: '1px solid rgba(0, 0, 0, 0.06)',
+                borderRadius: '16px',
+                marginBottom: '40px'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px' }}>
+                  <div>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      background: 'rgba(0, 194, 133, 0.08)',
+                      color: 'var(--color-secondary)',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontWeight: 800,
+                      letterSpacing: '0.5px'
+                    }}>
+                      GET IN TOUCH
+                    </span>
+                    <h2 style={{ fontSize: '2rem', fontWeight: '900', margin: '16px 0', color: '#0f172a', lineHeight: '1.2' }}>
+                      Have Questions? Contact Us
+                    </h2>
+                    <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '32px' }}>
+                      Reach out to our tournament planning division for partnership requests, custom corporate cups, or queries.
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontSize: '0.9rem', color: '#475569' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <MapPin size={20} style={{ color: 'var(--color-primary)' }} />
+                        <div>
+                          <strong>Arenova Head Office</strong>
+                          <div>Arenova Sports Hub, MG Road, Bengaluru, 560001</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Users size={20} style={{ color: 'var(--color-secondary)' }} />
+                        <div>
+                          <strong>League Support Hotline</strong>
+                          <div>+91 98765 43210 (Mon-Sat, 9AM - 6PM)</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Target size={20} style={{ color: 'var(--color-accent)' }} />
+                        <div>
+                          <strong>Official Email Contacts</strong>
+                          <div>league@arenova.in / customercare@arenova.in</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact form */}
+                  <form onSubmit={(e) => { e.preventDefault(); alert("Thank you! Your message has been sent successfully. Our team will contact you shortly."); e.target.reset(); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Full Name *</label>
+                      <input type="text" required className="form-control" placeholder="Enter your name" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Email Address *</label>
+                      <input type="email" required className="form-control" placeholder="e.g. contact@example.com" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Message *</label>
+                      <textarea required className="form-control" rows="4" placeholder="Write your message here..." style={{ resize: 'vertical', fontFamily: 'inherit' }}></textarea>
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', borderRadius: '8px', padding: '12px' }}>
+                      Send Message
+                    </button>
+                  </form>
+                </div>
+              </div>
+
             </div>
           )}
 
