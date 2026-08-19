@@ -42,21 +42,55 @@ const getFriendlyErrorMessage = (error) => {
   if (msg.includes('401') || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('token')) {
     return 'Your login session has expired or the verification token is invalid. Please sign in again.';
   }
-  if (msg.includes('400') || msg.toLowerCase().includes('validation') || msg.toLowerCase().includes('bad request')) {
-    return 'Some details you provided seem incorrect. Please check your form and try again.';
-  }
-  if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
-    return 'The requested tournament or registration could not be found.';
-  }
-  return 'Something went wrong. Please check your connection and try again.';
+  return msg;
 };
-
 function AppContent() {
   // Views/Steps: 'list', 'details', 'register', 'payment', 'success', 'dashboard'
   const [step, setStep] = useState('list');
   const [tournaments, setTournaments] = useState([]);
   const [loadingTournaments, setLoadingTournaments] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
+  
+  const getTournamentFee = (t, currentCategoryName) => {
+    if (!t) return 0;
+    if (currentCategoryName) {
+      const matchedCat = (t.categories || []).find(
+        c => (typeof c === 'string' ? c : c?.name) === currentCategoryName
+      );
+      if (matchedCat && typeof matchedCat === 'object' && matchedCat.fee !== undefined) {
+        return matchedCat.fee;
+      }
+    }
+    return t.registrationFee ?? t.fee ?? 0;
+  };
+
+  const getRegistrationType = (t, currentCategoryName) => {
+    if (!t) return 'INDIVIDUAL';
+    if (currentCategoryName) {
+      const matchedCat = (t.categories || []).find(
+        c => (typeof c === 'string' ? c : c?.name) === currentCategoryName
+      );
+      if (matchedCat && typeof matchedCat === 'object' && matchedCat.registrationType) {
+        return matchedCat.registrationType.toUpperCase();
+      }
+    }
+    if (t.registrationType) {
+      return t.registrationType.toUpperCase();
+    }
+    
+    // Fallback detection using strings
+    const catLower = String(currentCategoryName || '').toLowerCase();
+    if (catLower.includes('singles') || catLower.includes('solo') || catLower.includes('1v1')) {
+      return 'INDIVIDUAL';
+    }
+    if (catLower.includes('doubles') || catLower.includes('duo') || catLower.includes('2v2') || catLower.includes('pair')) {
+      return 'PAIR';
+    }
+    if (catLower.includes('team') || catLower.includes('squad') || catLower.includes('3v3') || catLower.includes('5v5') || catLower.includes('corporate') || catLower.includes('cup')) {
+      return 'TEAM';
+    }
+    return 'INDIVIDUAL';
+  };
   
   // Filters
   const [filterSport, setFilterSport] = useState('');
@@ -227,11 +261,15 @@ function AppContent() {
     };
   }, [showAuthModal, authStep]);
 
-  // Handle Select Tournament
   const handleSelectTournament = (t) => {
     setSelectedTournament(t);
+    let firstCategory = 'Open Category';
+    if (t.categories && t.categories.length > 0) {
+      const first = t.categories[0];
+      firstCategory = typeof first === 'string' ? first : (first?.name || 'Open Category');
+    }
     setRegFormData({
-      categoryName: t.categories && t.categories.length > 0 ? t.categories[0] : 'Open Category',
+      categoryName: firstCategory,
       partnerUserId: '',
       partnerName: '',
       partnerPhone: '',
@@ -404,15 +442,21 @@ function AppContent() {
     setIsRegistering(true);
     setRegError('');
     try {
+      const regType = getRegistrationType(selectedTournament, regFormData.categoryName);
       const payload = {
-        categoryName: regFormData.categoryName,
-        teamName: regFormData.teamName || undefined,
-        partnerUserId: regFormData.partnerUserId || undefined,
-        partnerName: regFormData.partnerName || undefined,
-        partnerPhone: regFormData.partnerPhone || undefined,
-        teamMembers: regFormData.teamMembers.filter(m => m.name.trim() !== '')
+        categoryName: regFormData.categoryName || 'Open Category'
       };
 
+      if (regType === 'TEAM') {
+        payload.teamName = regFormData.teamName || undefined;
+        payload.teamMembers = regFormData.teamMembers.filter(m => m.name.trim() !== '');
+      } else if (regType === 'PAIR') {
+        payload.partnerUserId = regFormData.partnerUserId || undefined;
+        payload.partnerName = regFormData.partnerName || undefined;
+        payload.partnerPhone = regFormData.partnerPhone || undefined;
+      }
+
+      console.log("Tournament registration payload sent:", payload);
       const result = await api.registerForTournament(selectedTournament._id, payload);
       if (result.success) {
         setActiveRegistration(result.data.registration);
@@ -743,7 +787,7 @@ function AppContent() {
                       {selectedTournament.sport}
                     </span>
                     <span className="badge-glow-green" style={{ fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', fontWeight: 800 }}>
-                      Entry Fee: ₹{selectedTournament.fee}
+                      Entry Fee: ₹{getTournamentFee(selectedTournament)}
                     </span>
                   </div>
 
@@ -771,13 +815,16 @@ function AppContent() {
                   </div>
                 </div>
 
-                {selectedTournament.categories && (
+                {selectedTournament.categories && selectedTournament.categories.length > 0 && (
                   <div style={{ marginBottom: '32px' }}>
                     <h4 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '12px' }}>Available Tournament Categories:</h4>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      {selectedTournament.categories.map((c, i) => (
-                        <span key={i} className="badge-glow-blue" style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 600 }}>{c}</span>
-                      ))}
+                      {selectedTournament.categories.map((c, i) => {
+                        const name = typeof c === 'string' ? c : (c?.name || '');
+                        return (
+                          <span key={i} className="badge-glow-blue" style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 600 }}>{name}</span>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -814,181 +861,346 @@ function AppContent() {
           )}
 
           {/* STEP 3: Registration Form */}
-          {step === 'register' && selectedTournament && (
-            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-              <button 
-                onClick={() => setStep('details')}
-                className="btn btn-outline"
-                style={{ marginBottom: '24px', borderRadius: '20px' }}
-                disabled={isRegistering}
-              >
-                <ArrowLeft size={16} />
-                Back to Details
-              </button>
+          {step === 'register' && selectedTournament && (() => {
+            const regType = getRegistrationType(selectedTournament, regFormData.categoryName);
+            const currentFee = getTournamentFee(selectedTournament, regFormData.categoryName);
+            
+            return (
+              <div style={{ maxWidth: '650px', margin: '0 auto' }}>
+                <button 
+                  onClick={() => setStep('details')}
+                  className="btn btn-outline"
+                  style={{ marginBottom: '24px', borderRadius: '20px' }}
+                  disabled={isRegistering}
+                >
+                  <ArrowLeft size={16} />
+                  Back to Details
+                </button>
 
-              <div className="glass-card" style={{ padding: '40px' }}>
-                <h2 style={{ fontSize: '1.85rem', fontWeight: '900', marginBottom: '8px' }}>Roster Details Form</h2>
-                <p style={{ color: 'var(--color-text-secondary)', marginBottom: '32px', fontSize: '0.95rem' }}>
-                  Please fill out the official details for your category tournament slots.
-                </p>
-
-                {regError && (
-                  <div style={{ display: 'flex', gap: '10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--color-error)', color: 'var(--color-error)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
-                    <AlertCircle size={20} style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.9rem' }}>{regError}</span>
+                {/* Tournament Mini Summary Card */}
+                <div className="glass-card" style={{ padding: '20px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center', background: '#ffffff', border: '1px solid rgba(0, 79, 182, 0.08)' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: 'rgba(0, 79, 182, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--color-primary)',
+                    flexShrink: 0
+                  }}>
+                    <Trophy size={24} />
                   </div>
-                )}
-
-                <form onSubmit={handleRegisterSubmit}>
-                  
-                  {/* Category Selection */}
-                  <div className="form-group">
-                    <label className="form-label">Tournament Category *</label>
-                    <select 
-                      value={regFormData.categoryName} 
-                      onChange={(e) => setRegFormData(prev => ({ ...prev, categoryName: e.target.value }))}
-                      required
-                      className="form-control"
-                    >
-                      {(selectedTournament.categories || ['Open Category']).map((c, i) => (
-                        <option key={i} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Team/Club Name (if dynamic or team sport) */}
-                  <div className="form-group">
-                    <label className="form-label">Team / Club Name (Optional)</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      placeholder="e.g. Royal Strikers FC" 
-                      value={regFormData.teamName}
-                      onChange={(e) => setRegFormData(prev => ({ ...prev, teamName: e.target.value }))}
-                    />
-                  </div>
-
-                  {/* Partner Details (Doubles / Duo Partner) */}
-                  <div style={{ background: 'rgba(0, 79, 182, 0.02)', padding: '20px', borderRadius: '14px', border: '1px solid var(--color-border)', marginBottom: '24px' }}>
-                    <h4 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '12px', color: 'var(--color-primary)' }}>Partner Roster Details (If applicable)</h4>
-                    <div className="form-group">
-                      <label className="form-label">Partner User ID</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="Partner's registration ID" 
-                        value={regFormData.partnerUserId}
-                        onChange={(e) => setRegFormData(prev => ({ ...prev, partnerUserId: e.target.value }))}
-                      />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--color-primary-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {selectedTournament.sport} • {selectedTournament.city}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Partner Legal Name</label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          placeholder="Partner name" 
-                          value={regFormData.partnerName}
-                          onChange={(e) => setRegFormData(prev => ({ ...prev, partnerName: e.target.value }))}
-                        />
-                      </div>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Partner Phone Number</label>
-                        <input 
-                          type="tel" 
-                          className="form-control" 
-                          placeholder="10-digit mobile" 
-                          pattern="[0-9]{10}"
-                          value={regFormData.partnerPhone}
-                          onChange={(e) => setRegFormData(prev => ({ ...prev, partnerPhone: e.target.value }))}
-                        />
-                      </div>
-                    </div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', margin: '2px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--color-text-primary)' }}>
+                      {selectedTournament.title}
+                    </h3>
                   </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '700' }}>ENTRY FEE</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--color-secondary)' }}>₹{currentFee}</div>
+                  </div>
+                </div>
 
-                  {/* Team Members List */}
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h4 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--color-primary)' }}>Team Members</h4>
-                      <button 
-                        type="button" 
-                        className="btn btn-outline" 
-                        style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: '8px' }}
-                        onClick={() => setRegFormData(prev => ({ ...prev, teamMembers: [...prev.teamMembers, { name: '', phone: '', role: 'Player' }] }))}
-                      >
-                        <Plus size={14} /> Add Member
-                      </button>
+                <div className="glass-card" style={{ padding: '36px', background: '#ffffff' }}>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: '900', marginBottom: '8px', color: 'var(--color-text-primary)' }}>Roster Registration</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', marginBottom: '28px', fontSize: '0.9rem', fontWeight: '500' }}>
+                    Select your tournament category and fill out your roster details to lock your entry slot.
+                  </p>
+
+                  {regError && (
+                    <div style={{ display: 'flex', gap: '10px', background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--color-error)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
+                      <AlertCircle size={20} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600' }}>{regError}</span>
                     </div>
+                  )}
 
-                    {regFormData.teamMembers.map((m, idx) => (
-                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
-                        <input 
-                          type="text" 
-                          required 
-                          placeholder="Full Name" 
-                          className="form-control" 
-                          value={m.name}
-                          onChange={(e) => {
-                            const newMembers = [...regFormData.teamMembers];
-                            newMembers[idx].name = e.target.value;
-                            setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
-                          }}
-                        />
-                        <input 
-                          type="tel" 
-                          required 
-                          placeholder="Phone" 
-                          pattern="[0-9]{10}"
-                          className="form-control" 
-                          value={m.phone}
-                          onChange={(e) => {
-                            const newMembers = [...regFormData.teamMembers];
-                            newMembers[idx].phone = e.target.value;
-                            setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
-                          }}
-                        />
+                  <form onSubmit={handleRegisterSubmit}>
+                    
+                    {/* Category Selection */}
+                    <div className="form-group" style={{ position: 'relative' }}>
+                      <label className="form-label">Tournament Category *</label>
+                      <div style={{ position: 'relative' }}>
                         <select 
-                          className="form-control" 
-                          value={m.role}
-                          onChange={(e) => {
-                            const newMembers = [...regFormData.teamMembers];
-                            newMembers[idx].role = e.target.value;
-                            setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
+                          value={regFormData.categoryName} 
+                          onChange={(e) => setRegFormData(prev => ({ ...prev, categoryName: e.target.value }))}
+                          required
+                          className="form-control"
+                          style={{
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            paddingRight: '45px',
+                            background: '#ffffff',
+                            fontWeight: '700',
+                            border: '2px solid rgba(0, 79, 182, 0.1)',
+                            borderRadius: '12px',
+                            cursor: 'pointer'
                           }}
                         >
-                          <option value="Captain">Captain</option>
-                          <option value="Player">Player</option>
-                          <option value="Substitute">Substitute</option>
+                          {((selectedTournament.categories && selectedTournament.categories.length > 0) 
+                            ? selectedTournament.categories 
+                            : ['Open Category']
+                          ).map((c, i) => {
+                            const name = typeof c === 'string' ? c : (c?.name || '');
+                            return (
+                              <option key={i} value={name}>{name}</option>
+                            );
+                          })}
                         </select>
-                        <button 
-                          type="button" 
-                          className="btn btn-outline" 
-                          style={{ padding: '10px', color: 'var(--color-error)' }}
-                          disabled={regFormData.teamMembers.length <= 1}
-                          onClick={() => {
-                            const newMembers = regFormData.teamMembers.filter((_, i) => i !== idx);
-                            setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
-                          }}
-                        >
-                          <Trash size={14} />
-                        </button>
+                        <div style={{
+                          position: 'absolute',
+                          right: '18px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          pointerEvents: 'none',
+                          color: 'var(--color-primary)',
+                          fontWeight: 'bold',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}>
+                          ▼
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                      {(!selectedTournament.categories || selectedTournament.categories.length === 0) && (
+                        <div style={{
+                          color: 'var(--color-error)',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          marginTop: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <AlertCircle size={14} />
+                          <span>Warning: This tournament has no categories configured in the backend database. Submissions will fail.</span>
+                        </div>
+                      )}
+                    </div>
 
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '16px', marginTop: '12px' }}
-                    disabled={isRegistering}
-                  >
-                    {isRegistering ? 'Registering...' : `Confirm & Go to Payment (₹${selectedTournament.fee})`}
-                    <ArrowRight size={18} />
-                  </button>
-                </form>
+                    {/* INDIVIDUAL REGISTRATION VIEW */}
+                    {regType === 'INDIVIDUAL' && (
+                      <div style={{
+                        background: 'rgba(0, 79, 182, 0.03)',
+                        border: '2px dashed rgba(0, 79, 182, 0.15)',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        marginBottom: '28px',
+                        textAlign: 'center'
+                      }}>
+                        <User size={36} style={{ color: 'var(--color-primary-light)', marginBottom: '12px' }} />
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '8px', color: 'var(--color-text-primary)' }}>
+                          Individual Slot Registration
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: '1.5', maxWidth: '400px', margin: '0 auto 16px' }}>
+                          You are registering as a solo participant. Your profile coordinates will be synchronized for this tournament slot.
+                        </p>
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: '#ffffff',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(0, 79, 182, 0.08)',
+                          fontSize: '0.82rem',
+                          fontWeight: '700',
+                          color: 'var(--color-text-primary)'
+                        }}>
+                          <Check size={14} style={{ color: 'var(--color-secondary)' }} />
+                          <span>Logged in as: {authObj.user?.firstName || 'User'} ({authObj.user?.phone || 'Verified'})</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PAIR REGISTRATION VIEW */}
+                    {regType === 'PAIR' && (
+                      <div style={{
+                        background: 'rgba(0, 79, 182, 0.02)',
+                        border: '2px solid rgba(0, 79, 182, 0.08)',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        marginBottom: '28px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                          <Users size={20} style={{ color: 'var(--color-primary)' }} />
+                          <h4 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--color-primary)', margin: 0 }}>Partner Roster Details</h4>
+                        </div>
+                        
+                        <div className="form-group">
+                          <label className="form-label">Partner User ID (Optional)</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder="e.g. Partner's user or registration ID" 
+                            value={regFormData.partnerUserId}
+                            onChange={(e) => setRegFormData(prev => ({ ...prev, partnerUserId: e.target.value }))}
+                          />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Partner Legal Name *</label>
+                            <input 
+                              type="text" 
+                              required={regType === 'PAIR'}
+                              className="form-control" 
+                              placeholder="Full Name" 
+                              value={regFormData.partnerName}
+                              onChange={(e) => setRegFormData(prev => ({ ...prev, partnerName: e.target.value }))}
+                            />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">Partner Phone *</label>
+                            <input 
+                              type="tel" 
+                              required={regType === 'PAIR'}
+                              className="form-control" 
+                              placeholder="10-digit phone" 
+                              pattern="[0-9]{10}"
+                              value={regFormData.partnerPhone}
+                              onChange={(e) => setRegFormData(prev => ({ ...prev, partnerPhone: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TEAM REGISTRATION VIEW */}
+                    {regType === 'TEAM' && (
+                      <div style={{ marginBottom: '28px' }}>
+                        {/* Team Name */}
+                        <div className="form-group">
+                          <label className="form-label">Team / Club Name *</label>
+                          <input 
+                            type="text" 
+                            required={regType === 'TEAM'}
+                            className="form-control" 
+                            placeholder="e.g. Royal Strikers FC" 
+                            value={regFormData.teamName}
+                            onChange={(e) => setRegFormData(prev => ({ ...prev, teamName: e.target.value }))}
+                          />
+                        </div>
+
+                        {/* Team Members List */}
+                        <div style={{
+                          background: 'rgba(0, 158, 122, 0.02)',
+                          border: '2px solid rgba(0, 158, 122, 0.08)',
+                          borderRadius: '16px',
+                          padding: '24px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Users size={20} style={{ color: 'var(--color-secondary)' }} />
+                              <h4 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--color-secondary)', margin: 0 }}>Team Roster</h4>
+                            </div>
+                            <button 
+                              type="button" 
+                              className="btn btn-outline" 
+                              style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', height: '36px' }}
+                              onClick={() => setRegFormData(prev => ({ ...prev, teamMembers: [...prev.teamMembers, { name: '', phone: '', role: 'Player' }] }))}
+                            >
+                              <Plus size={14} /> Add Member
+                            </button>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {regFormData.teamMembers.map((m, idx) => (
+                              <div key={idx} style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1.2fr 1.2fr 1fr auto',
+                                gap: '10px',
+                                alignItems: 'center',
+                                background: '#ffffff',
+                                padding: '12px',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(0, 158, 122, 0.1)'
+                              }}>
+                                <input 
+                                  type="text" 
+                                  required 
+                                  placeholder="Player Name" 
+                                  className="form-control" 
+                                  style={{ padding: '10px 14px', fontSize: '0.88rem' }}
+                                  value={m.name}
+                                  onChange={(e) => {
+                                    const newMembers = [...regFormData.teamMembers];
+                                    newMembers[idx].name = e.target.value;
+                                    setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
+                                  }}
+                                />
+                                <input 
+                                  type="tel" 
+                                  required 
+                                  placeholder="Phone" 
+                                  pattern="[0-9]{10}"
+                                  className="form-control" 
+                                  style={{ padding: '10px 14px', fontSize: '0.88rem' }}
+                                  value={m.phone}
+                                  onChange={(e) => {
+                                    const newMembers = [...regFormData.teamMembers];
+                                    newMembers[idx].phone = e.target.value;
+                                    setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
+                                  }}
+                                />
+                                <select 
+                                  className="form-control" 
+                                  style={{ padding: '10px 14px', fontSize: '0.88rem', cursor: 'pointer' }}
+                                  value={m.role}
+                                  onChange={(e) => {
+                                    const newMembers = [...regFormData.teamMembers];
+                                    newMembers[idx].role = e.target.value;
+                                    setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
+                                  }}
+                                >
+                                  <option value="Captain">Captain</option>
+                                  <option value="Player">Player</option>
+                                  <option value="Substitute">Substitute</option>
+                                </select>
+                                <button 
+                                  type="button" 
+                                  className="btn btn-outline" 
+                                  style={{
+                                    padding: '10px',
+                                    color: 'var(--color-error)',
+                                    borderColor: 'rgba(239, 68, 68, 0.15)',
+                                    height: '42px',
+                                    width: '42px',
+                                    borderRadius: '10px',
+                                    background: 'rgba(239, 68, 68, 0.02)'
+                                  }}
+                                  disabled={regFormData.teamMembers.length <= 1}
+                                  onClick={() => {
+                                    const newMembers = regFormData.teamMembers.filter((_, i) => i !== idx);
+                                    setRegFormData(prev => ({ ...prev, teamMembers: newMembers }));
+                                  }}
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      style={{ width: '100%', padding: '16px', marginTop: '16px', fontSize: '1.05rem' }}
+                      disabled={isRegistering}
+                    >
+                      {isRegistering ? 'Processing Registration...' : `Confirm & Go to Payment (₹${currentFee})`}
+                      <ArrowRight size={18} />
+                    </button>
+                  </form>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* STEP 4: Payment simulation gate */}
           {step === 'payment' && selectedTournament && (
@@ -1055,7 +1267,7 @@ function AppContent() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ color: 'var(--color-text-secondary)' }}>Stadium Entry Fee</span>
-                    <span>₹{selectedTournament.fee}.00</span>
+                    <span>₹{getTournamentFee(selectedTournament, regFormData.categoryName)}.00</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                     <span>Processing charges</span>
@@ -1063,7 +1275,7 @@ function AppContent() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '900', fontSize: '1.35rem', marginTop: '16px', borderTop: '2px dashed var(--color-border)', paddingTop: '16px' }}>
                     <span>Total Cost</span>
-                    <span style={{ color: 'var(--color-secondary)' }}>₹{selectedTournament.fee}.00</span>
+                    <span style={{ color: 'var(--color-secondary)' }}>₹{getTournamentFee(selectedTournament, regFormData.categoryName)}.00</span>
                   </div>
                 </div>
 
@@ -1199,7 +1411,7 @@ function AppContent() {
                     className="btn btn-secondary"
                     style={{ width: '100%', padding: '16px', marginTop: '24px', fontSize: '1.1rem' }}
                   >
-                    Pay & Verify Roster Slot (₹{selectedTournament.fee})
+                    Pay & Verify Roster Slot (₹{getTournamentFee(selectedTournament, regFormData.categoryName)})
                   </button>
                 </form>
               </div>
@@ -1283,7 +1495,7 @@ function AppContent() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                     <span style={{ color: 'var(--color-text-muted)' }}>PAID AMOUNT</span>
-                    <span style={{ color: 'var(--color-success)', fontWeight: '800' }}>₹{selectedTournament.fee}.00</span>
+                    <span style={{ color: 'var(--color-success)', fontWeight: '800' }}>₹{getTournamentFee(selectedTournament, regFormData.categoryName)}.00</span>
                   </div>
                 </div>
 

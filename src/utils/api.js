@@ -1,4 +1,4 @@
-const BASE_URL = 'https://arenova-backend-production-8430.up.railway.app';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://arenova-backend-production-8430.up.railway.app';
 
 // Local storage helpers for auth state
 const STORAGE_KEYS = {
