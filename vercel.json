@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://arenova-backend-production-3192.up.railway.app/api/:path*"
+    }
+  ]
+}
