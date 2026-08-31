@@ -2,12 +2,12 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCEfLvy8ws12rfdMpzcUlcAXJGpDjeLtPw',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'arenova-test.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'arenova-test',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'arenova-test.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '144453754365',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:144453754365:web:970dc7d74ac1db01f84d94',
 };
 
 // Check if variables are missing
