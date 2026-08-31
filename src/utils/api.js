@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://arenova-backend-production-8430.up.railway.app';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Local storage helpers for auth state
 const STORAGE_KEYS = {
@@ -30,10 +30,15 @@ export const clearStoredAuth = () => {
 // Helper for fetch with Authorization headers
 const request = async (endpoint, options = {}) => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const isAuthEndpoint = endpoint.includes('/auth/sync') || endpoint.includes('/auth/complete-profile');
+  const isPublicGet = (options.method || 'GET').toUpperCase() === 'GET' && !endpoint.includes('/registrations');
   
+  const method = (options.method || 'GET').toUpperCase();
+  const hasBody = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
   const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(token && !isAuthEndpoint && !isPublicGet ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -96,7 +101,7 @@ export const api = {
 
   // Registrations
   registerForTournament: async (id, registrationData) => {
-    // registrationData: { categoryName, partnerUserId, partnerName, partnerPhone, teamName, teamMembers: [{ name, phone, role }] }
+    // registrationData: { categoryName, partnerUserId, partnerName, partnerPhone, teamName, teamMembers: [{ name, phone, role }], playerName, playerEmail, playerPhone }
     return request(`/api/novare/tournaments/${id}/register`, {
       method: 'POST',
       body: JSON.stringify(registrationData),
@@ -117,5 +122,14 @@ export const api = {
 
   getRegistrationById: async (id) => {
     return request(`/api/novare/registrations/${id}`);
+  },
+
+  // Enquiries
+  submitEnquiry: async (enquiryData) => {
+    // enquiryData: { firstName, lastName, email, company, serviceInterestedIn, message }
+    return request('/api/novare/enquiries', {
+      method: 'POST',
+      body: JSON.stringify(enquiryData),
+    });
   },
 };

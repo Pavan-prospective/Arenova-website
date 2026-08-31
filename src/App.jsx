@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Trophy, Calendar, Users, Target, ShieldCheck, 
   MapPin, Clock, ArrowRight, ArrowLeft, Download, Check, AlertCircle,
-  Printer, Award, Sparkles, Smile, Search, LogIn, LogOut, Key, Plus, Trash, User, CreditCard, RefreshCw, Phone
+  Printer, Award, Sparkles, Smile, Search, LogIn, LogOut, Key, Plus, Trash, User, CreditCard, RefreshCw, Phone, Smartphone, Globe
 } from 'lucide-react';
 import { getArenovaLogo } from './utils/secureAsset';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -105,6 +105,10 @@ function AppContent() {
   const [otpCode, setOtpCode] = useState('');
   const [activeToken, setActiveToken] = useState('');
   const [profileForm, setProfileForm] = useState({ firstName: '', lastName: '', email: '' });
+  const [profileEditForm, setProfileEditForm] = useState({ firstName: '', lastName: '', email: '' });
+  const [profileEditSuccess, setProfileEditSuccess] = useState('');
+  const [profileEditError, setProfileEditError] = useState('');
+  const [profileEditLoading, setProfileEditLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -135,6 +139,19 @@ function AppContent() {
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
 
+  // Enquiry form state
+  const [enquiryData, setEnquiryData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    company: '',
+    serviceInterestedIn: 'Sports & Tournaments Enquiry',
+    message: ''
+  });
+  const [isSubmittingEnquiry, setIsSubmittingEnquiry] = useState(false);
+  const [enquirySuccessMessage, setEnquirySuccessMessage] = useState('');
+  const [enquiryErrorMessage, setEnquiryErrorMessage] = useState('');
+
   const [logoUrl, setLogoUrl] = useState('');
 
   // Load logo
@@ -158,72 +175,8 @@ function AppContent() {
       setTournaments(data.data || data || []);
     } catch (err) {
       console.error("Failed to fetch tournaments:", err);
-      // Fallback placeholder data if API is down or empty
-      setTournaments([
-        {
-          _id: 'arn-cricket-26',
-          title: 'Arenova Championship Cricket League',
-          sport: 'Cricket',
-          city: 'Mumbai',
-          game: 'CRICKET (T20)',
-          stadium: 'Wankhede Arena, Mumbai',
-          prizePool: '₹10,00,000',
-          date: 'Oct 10 - Oct 16, 2026',
-          regDeadline: 'Oct 05, 2026',
-          teamSize: 'Squad (11 Players + 4 Subs)',
-          fee: 999,
-          categories: ['Open Category', 'Corporate Cup'],
-          description: 'Step onto the professional turf under high-intensity stadium floodlights. Compete in a T20 league designed for elite squads, corporate clubs, and state-level players.',
-          rules: [
-            'Age limit: Open category. Valid ID proof mandatory.',
-            'Professional leather balls and match-day safety equipment provided.',
-            'FIBA/ICC tournament regulations apply. Full day/night slots.',
-            'Officiated by a certified panel of neutral match referees.'
-          ]
-        },
-        {
-          _id: 'arn-badminton-26',
-          title: 'Arenova Badminton Pro Masters',
-          sport: 'Badminton',
-          city: 'Delhi',
-          game: 'BADMINTON (SINGLES/DOUBLES)',
-          stadium: 'Indira Gandhi Indoor Arena',
-          prizePool: '₹2,50,000',
-          date: 'Oct 24 - Oct 28, 2026',
-          regDeadline: 'Oct 20, 2026',
-          teamSize: 'Solo (1v1) or Duo (2v2)',
-          fee: 299,
-          categories: ["Men's Singles", "Men's Doubles", "Mixed Doubles"],
-          description: 'Compete on synthetic indoor courts under professional lighting. Designed for seasoned singles and doubles competitors looking for ranking points and national glory.',
-          rules: [
-            'Synthetic courts require professional non-marking court shoes.',
-            'Tournament shuttles: Yonex Aerosensa series.',
-            'Knockout system: best of 3 sets, 21-point rally score format.',
-            'Coaches allowed at courtside during official match intervals.'
-          ]
-        },
-        {
-          _id: 'arn-basketball-26',
-          title: 'Arenova Basketball Arena Showdown',
-          sport: 'Basketball',
-          city: 'Bengaluru',
-          game: 'BASKETBALL (3v3 & 5v5)',
-          stadium: 'Arenova Central Court, Bengaluru',
-          prizePool: '₹5,00,000',
-          date: 'Nov 05 - Nov 10, 2026',
-          regDeadline: 'Nov 01, 2026',
-          teamSize: 'Squad (5 Players + 3 Subs)',
-          fee: 499,
-          categories: ['3v3 Pro', '5v5 Men Open'],
-          description: 'Fast-paced basketball on premium wooden courts. Features digital scoreboards, professional shot clocks, and top-tier referee squads.',
-          rules: [
-            'Standard FIBA match play regulations strictly enforced.',
-            'Uniform rule: Teams must wear matching jerseys with clear numberings.',
-            'Full courtside first-aid and sports rehab teams present.',
-            'Most Valuable Player (MVP) award will be presented after the finals.'
-          ]
-        }
-      ]);
+      // Removed fallback data so only API data is rendered. 
+      setTournaments([]);
     } finally {
       setLoadingTournaments(false);
     }
@@ -405,6 +358,44 @@ function AppContent() {
     }
   };
 
+  // Profile update from dashboard
+  useEffect(() => {
+    if (authObj.user) {
+      setProfileEditForm({
+        firstName: authObj.user.firstName || '',
+        lastName: authObj.user.lastName || '',
+        email: authObj.user.email || '',
+      });
+    }
+  }, [authObj.user]);
+
+  const handleUpdateProfileDashboard = async (e) => {
+    e.preventDefault();
+    setProfileEditError('');
+    setProfileEditSuccess('');
+    setProfileEditLoading(true);
+    try {
+      const tokenToUse = activeToken || localStorage.getItem('arenova_auth_token') || '';
+      if (!tokenToUse) {
+        throw new Error("User session expired. Please sign in again.");
+      }
+      await completeUserProfile(
+        tokenToUse,
+        profileEditForm.firstName,
+        profileEditForm.lastName,
+        profileEditForm.email
+      );
+      // Re-sync user
+      await signInWithToken(tokenToUse);
+      setAuthObj(getStoredAuth());
+      setProfileEditSuccess('Profile details successfully updated!');
+    } catch (err) {
+      setProfileEditError(getFriendlyErrorMessage(err));
+    } finally {
+      setProfileEditLoading(false);
+    }
+  };
+
   const handleSignOut = () => {
     clearStoredAuth();
     setAuthObj(getStoredAuth());
@@ -431,6 +422,38 @@ function AppContent() {
     }
   };
 
+  // Enquiry Form Submit
+  const handleEnquirySubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingEnquiry(true);
+    setEnquirySuccessMessage('');
+    setEnquiryErrorMessage('');
+    try {
+      const payload = {
+        ...enquiryData,
+        serviceInterestedIn: 'Other',
+        message: `[Category: ${enquiryData.serviceInterestedIn}]\n\n${enquiryData.message}`
+      };
+
+      const response = await api.submitEnquiry(payload);
+      if (response.success) {
+        setEnquirySuccessMessage(response.message || 'Enquiry submitted successfully. We will get back to you within 24 hours.');
+        setEnquiryData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          company: '',
+          serviceInterestedIn: 'Sports & Tournaments Enquiry',
+          message: ''
+        });
+      }
+    } catch (err) {
+      setEnquiryErrorMessage(err.message || 'Failed to submit enquiry. Please try again.');
+    } finally {
+      setIsSubmittingEnquiry(false);
+    }
+  };
+
   // Registration Submit
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
@@ -446,6 +469,13 @@ function AppContent() {
       const payload = {
         categoryName: regFormData.categoryName || 'Open Category'
       };
+
+      // Include registrant/player details so admin dashboard can resolve names and contact details accurately
+      if (authObj.user) {
+        payload.playerName = `${authObj.user.firstName || ''} ${authObj.user.lastName || ''}`.trim() || undefined;
+        payload.playerEmail = authObj.user.email || undefined;
+        payload.playerPhone = authObj.user.phone || undefined;
+      }
 
       if (regType === 'TEAM') {
         payload.teamName = regFormData.teamName || undefined;
@@ -536,12 +566,7 @@ function AppContent() {
         borderBottom: '2px solid rgba(0, 0, 0, 0.06)',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
       }}>
-        <div className="container" style={{
-          height: '80px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
+        <div className="header-container container">
           <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => { setStep('list'); setSelectedTournament(null); }}>
             {logoUrl ? (
               <img 
@@ -558,10 +583,18 @@ function AppContent() {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }} className="header-menu-links">
+            <a href="#" onClick={(e) => { e.preventDefault(); setStep('list'); setSelectedTournament(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--color-text-primary)'}>Tournaments</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setStep('list'); setSelectedTournament(null); setTimeout(() => { window.scrollTo({ top: document.querySelector('.sections-divider')?.offsetTop || 800, behavior: 'smooth' }) }, 100); }} style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--color-text-primary)'}>Our Mission</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setStep('list'); setSelectedTournament(null); setTimeout(() => { window.scrollTo({ top: document.querySelectorAll('.sections-divider')[1]?.offsetTop || 1200, behavior: 'smooth' }) }, 100); }} style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--color-text-primary)'}>Partners</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setStep('list'); setSelectedTournament(null); setTimeout(() => { window.scrollTo({ top: document.querySelectorAll('.sections-divider')[2]?.offsetTop || 1600, behavior: 'smooth' }) }, 100); }} style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--color-text-primary)'}>Services</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setStep('list'); setSelectedTournament(null); setTimeout(() => { window.scrollTo({ top: document.getElementById('contact-enquiry')?.offsetTop || 2000, behavior: 'smooth' }) }, 100); }} style={{ color: 'var(--color-text-primary)', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = 'var(--color-primary)'} onMouseLeave={(e) => e.target.style.color = 'var(--color-text-primary)'}>Submit Enquiry</a>
+          </div>
+
+          <div className="header-nav" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button 
               className="btn btn-outline" 
-              style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '0.85rem' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', padding: 0, borderRadius: '50%', border: '1px solid rgba(0, 79, 182, 0.2)', transition: 'all 0.2s' }}
               onClick={() => {
                 if (authObj.token) {
                   fetchMyRegistrations();
@@ -570,8 +603,9 @@ function AppContent() {
                   setShowAuthModal(true);
                 }
               }}
+              title="My Dashboard"
             >
-              My Dashboard
+              <Users size={18} />
             </button>
 
             {authObj.token ? (
@@ -614,17 +648,20 @@ function AppContent() {
           {step === 'list' && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                <h1 className="text-gradient-ai" style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '16px', letterSpacing: '-0.5px' }}>
-                  Stadium Championships
+                <span style={{ fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--color-primary)', letterSpacing: '1.5px', display: 'block', marginBottom: '8px' }}>
+                  FEATURED TOURNAMENTS
+                </span>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '16px', color: '#0b1329', letterSpacing: '-0.8px' }}>
+                  {filteredTournaments.length} tournaments found
                 </h1>
                 <p style={{ color: 'var(--color-text-secondary)', maxWidth: '650px', margin: '0 auto', fontSize: '1.05rem', fontWeight: '500' }}>
-                  Select an official arena tournament, filter by your favorite sport or city, and book your championship roster.
+                  Find, filter, and register for elite tournaments in your city. Select your category, set your squad roster, and claim your spot on the arena grid.
                 </p>
               </div>
 
               {/* Filters & Search Control Bar */}
-              <div className="glass-card" style={{ padding: '20px', marginBottom: '40px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
+              <div className="glass-card filter-bar" style={{ padding: '20px', marginBottom: '40px' }}>
+                <div className="filter-search-wrap">
                   <div style={{ position: 'relative', flex: 1 }}>
                     <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                     <input 
@@ -638,26 +675,29 @@ function AppContent() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <div className="filter-selects-wrap">
                   <select 
                     value={filterSport} 
                     onChange={(e) => setFilterSport(e.target.value)}
                     className="form-control" 
-                    style={{ width: '160px', height: '48px', padding: '0 16px' }}
+                    style={{ width: '160px', height: '48px', padding: '0 16px', fontWeight: '600' }}
                   >
                     <option value="">All Sports</option>
                     <option value="Cricket">Cricket</option>
                     <option value="Badminton">Badminton</option>
                     <option value="Basketball">Basketball</option>
+                    <option value="Tennis">Tennis</option>
+                    <option value="Football">Football</option>
                   </select>
 
                   <select 
                     value={filterCity} 
                     onChange={(e) => setFilterCity(e.target.value)}
                     className="form-control" 
-                    style={{ width: '160px', height: '48px', padding: '0 16px' }}
+                    style={{ width: '160px', height: '48px', padding: '0 16px', fontWeight: '600' }}
                   >
                     <option value="">All Cities</option>
+                    <option value="Hyderabad">Hyderabad</option>
                     <option value="Mumbai">Mumbai</option>
                     <option value="Bengaluru">Bengaluru</option>
                     <option value="Delhi">Delhi</option>
@@ -666,11 +706,85 @@ function AppContent() {
                   <button 
                     onClick={() => { setFilterSport(''); setFilterCity(''); setSearchQuery(''); }}
                     className="btn btn-outline"
-                    style={{ height: '48px', padding: '0 20px', borderRadius: '12px' }}
+                    style={{ height: '48px', padding: '0 20px', borderRadius: '12px', fontWeight: '700' }}
                   >
                     Reset
                   </button>
                 </div>
+              </div>
+
+              {/* Quick Categories Layout area matching screenshot */}
+              <div style={{
+                display: 'flex',
+                gap: '16px',
+                flexWrap: 'wrap',
+                marginBottom: '40px'
+              }}>
+                {[
+                  { sport: 'Badminton', icon: '⚡', color: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.2)', iconColor: '#3b82f6' },
+                  { sport: 'Basketball', icon: '🏀', color: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.2)', iconColor: '#f59e0b' },
+                  { sport: 'Cricket', icon: '🏆', color: 'rgba(249, 115, 22, 0.1)', border: 'rgba(249, 115, 22, 0.2)', iconColor: '#f97316' },
+                  { sport: 'Football', icon: '⚽', color: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.2)', iconColor: '#10b981' },
+                  { sport: 'Tennis', icon: '☉', color: 'rgba(34, 197, 94, 0.1)', border: 'rgba(34, 197, 94, 0.2)', iconColor: '#22c55e' }
+                ].map((s) => {
+                  const count = tournaments.filter(t => t.sport?.toLowerCase() === s.sport.toLowerCase()).length;
+                  return (
+                    <div 
+                      key={s.sport}
+                      onClick={() => setFilterSport(filterSport === s.sport ? '' : s.sport)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px 20px',
+                        background: filterSport === s.sport ? '#0b1329' : '#ffffff',
+                        border: `1px solid ${filterSport === s.sport ? '#0b1329' : 'rgba(15, 23, 42, 0.08)'}`,
+                        borderRadius: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 12px -5px rgba(15, 23, 42, 0.05)',
+                        minWidth: '180px'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (filterSport !== s.sport) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.15)';
+                          e.currentTarget.style.boxShadow = '0 6px 16px -4px rgba(15, 23, 42, 0.08)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (filterSport !== s.sport) {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.08)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px -5px rgba(15, 23, 42, 0.05)';
+                        }
+                      }}
+                    >
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: s.color,
+                        border: `1px solid ${s.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.1rem',
+                        color: s.iconColor
+                      }}>
+                        {s.icon}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: '800', color: filterSport === s.sport ? '#ffffff' : '#0b1329' }}>
+                          {s.sport}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', fontWeight: '700', color: filterSport === s.sport ? 'rgba(255,255,255,0.6)' : '#64748b', marginTop: '2px' }}>
+                          {count} {count === 1 ? 'Tournament' : 'Tournaments'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {loadingTournaments ? (
@@ -689,75 +803,145 @@ function AppContent() {
                     const fallbackImg = t.sport?.toLowerCase().includes('cricket') ? FALLBACK_IMAGES.cricket 
                       : (t.sport?.toLowerCase().includes('badminton') ? FALLBACK_IMAGES.badminton : FALLBACK_IMAGES.basketball);
                     
+                    const cardImage = t.banner || t.image || fallbackImg;
+                    
+                    const isRegistrationOpen = (t.status?.toLowerCase().includes('open') || t.status?.toLowerCase() === 'published') && 
+                      !(t.registrationEndDate && new Date() > new Date(t.registrationEndDate));
+                    
+                    const displayStartDate = t.startDate ? new Date(t.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    const displayEndDate = t.endDate ? new Date(t.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    const displayDateStr = (displayStartDate && displayEndDate) ? `${displayStartDate} - ${displayEndDate}` : (t.date || 'Dates TBA');
+
+                    // Color code categories like in screenshots
+                    const sportTagColors = {
+                      badminton: { bg: '#3b82f6', text: '#ffffff' }, // Blue
+                      cricket: { bg: '#f97316', text: '#ffffff' },  // Orange
+                      tennis: { bg: '#22c55e', text: '#ffffff' },   // Green
+                      football: { bg: '#10b981', text: '#ffffff' }, // Emerald
+                      basketball: { bg: '#f59e0b', text: '#ffffff' } // Amber
+                    };
+                    const sportKey = t.sport?.toLowerCase() || 'badminton';
+                    const tagStyle = sportTagColors[sportKey] || { bg: '#3b82f6', text: '#ffffff' };
+
                     return (
-                      <div key={t._id} className="glass-card" style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',
-                        borderRadius: '16px',
-                        background: '#ffffff',
-                        border: '1px solid rgba(0, 0, 0, 0.06)'
-                      }}>
-                        <div style={{
-                          height: '200px',
-                          position: 'relative',
-                          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.75)), url(${fallbackImg})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          padding: '20px'
-                        }}>
+                      <div key={t._id} className="premium-card">
+                        <div className="premium-card-image-wrap" style={{ position: 'relative', height: '220px', background: '#0b1329', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {/* Actual tournament banner/image from backend if available, otherwise fallback image */}
+                          <img 
+                            src={cardImage} 
+                            alt={t.title} 
+                            className="premium-card-image" 
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }} 
+                          />
+                          {/* Sports-specific symbol / icon overlay on dark background as in screenshot */}
+                          <div style={{ position: 'relative', zIndex: 1, opacity: 0.15, transform: 'scale(1.8)' }}>
+                            {t.sport === 'Badminton' && <Trophy size={48} />}
+                            {t.sport === 'Cricket' && <Award size={48} />}
+                            {t.sport === 'Tennis' && <Sparkles size={48} />}
+                            {t.sport === 'Football' && <Users size={48} />}
+                            {t.sport === 'Basketball' && <Target size={48} />}
+                          </div>
+
+                          {/* Category Badge e.g. BADMINTON (Left Top) */}
                           <span style={{
                             position: 'absolute',
                             top: '16px',
                             left: '16px',
-                            fontSize: '0.75rem',
-                            background: 'var(--color-primary)',
-                            color: '#ffffff',
+                            fontSize: '0.68rem',
+                            background: tagStyle.bg,
+                            color: tagStyle.text,
                             padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontWeight: '800',
-                            letterSpacing: '0.5px'
+                            borderRadius: '12px',
+                            fontWeight: '900',
+                            letterSpacing: '0.8px',
+                            textTransform: 'uppercase',
+                            zIndex: 2
                           }}>
-                            {t.sport?.toUpperCase()}
+                            {t.sport}
                           </span>
-                          
-                          <div style={{ color: '#ffffff' }}>
-                            <div style={{ fontSize: '0.8rem', opacity: '0.8', textTransform: 'uppercase' }}>Host Venue</div>
-                            <h4 style={{ fontWeight: '800', fontSize: '1.1rem' }}>{t.stadium?.split(',')[0]}</h4>
+
+                          {/* Registration Status (Right Top) */}
+                          <span style={{
+                            position: 'absolute',
+                            top: '16px',
+                            right: '16px',
+                            fontSize: '0.68rem',
+                            background: isRegistrationOpen ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                            color: isRegistrationOpen ? '#22c55e' : '#64748b',
+                            border: isRegistrationOpen ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(100, 116, 139, 0.3)',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontWeight: '800',
+                            letterSpacing: '0.5px',
+                            zIndex: 2
+                          }}>
+                            {isRegistrationOpen ? (t.status === 'PUBLISHED' ? 'Registration Open' : t.status) : 'Registration Closed'}
+                          </span>
+
+                          {/* Dynamic Large Sport Symbol in center of card visual */}
+                          <div style={{ position: 'absolute', color: 'rgba(255, 255, 255, 0.08)', transform: 'scale(3.5)', zIndex: 1 }}>
+                            {t.sport === 'Badminton' && <span>⚡</span>}
+                            {t.sport === 'Cricket' && <span>🏆</span>}
+                            {t.sport === 'Tennis' && <span>☉</span>}
+                            {t.sport === 'Football' && <span>⚏</span>}
+                            {t.sport === 'Basketball' && <span>🏀</span>}
                           </div>
                         </div>
 
-                        <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: '#ffffff' }}>
                           <div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '8px', color: '#0f172a' }}>{t.title}</h3>
-                            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px', lineHeight: '1.5' }}>
-                              {t.description || 'Compete in a professional-tier arena fixture.'}
-                            </p>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '14px', color: '#0b1329', letterSpacing: '-0.3px', lineHeight: '1.35' }}>
+                              {t.title}
+                            </h3>
+                            
+                            {/* Location and Date details */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '0.82rem', fontWeight: '600' }}>
+                                <MapPin size={14} style={{ color: '#94a3b8' }} />
+                                <span>{t.city}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '0.82rem', fontWeight: '600' }}>
+                                <Calendar size={14} style={{ color: '#94a3b8' }} />
+                                <span>{t.date || displayDateStr}</span>
+                              </div>
+                            </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', color: '#475569', borderTop: '1px solid #f1f5f9', paddingTop: '16px', marginBottom: '20px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#94a3b8' }}>PRIZE POOL</span>
-                                <span style={{ fontWeight: '700', color: 'var(--color-secondary)' }}>{t.prizePool}</span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#94a3b8' }}>LOCATION</span>
-                                <span style={{ fontWeight: '600' }}>{t.city}</span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#94a3b8' }}>DEADLINE</span>
-                                <span style={{ fontWeight: '600', color: 'var(--color-error)' }}>{t.regDeadline}</span>
-                              </div>
+                            {/* Prize Pool Label */}
+                            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', marginBottom: '20px' }}>
+                              <span style={{ fontSize: '0.62rem', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.8px', display: 'block', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                PRIZE POOL
+                              </span>
+                              <span style={{ fontSize: '1.35rem', fontWeight: '900', color: '#009e7a', fontFamily: 'Outfit, sans-serif' }}>
+                                {t.prizePool}
+                              </span>
                             </div>
                           </div>
 
                           <button 
                             onClick={() => handleSelectTournament(t)}
                             className="btn btn-primary"
-                            style={{ width: '100%', borderRadius: '8px', padding: '12px' }}
+                            style={{ 
+                              width: '100%', 
+                              borderRadius: '12px', 
+                              padding: '12px', 
+                              fontSize: '0.85rem',
+                              fontWeight: '800',
+                              letterSpacing: '0.5px',
+                              background: isRegistrationOpen ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : '#e2e8f0',
+                              color: isRegistrationOpen ? '#ffffff' : '#94a3b8',
+                              cursor: isRegistrationOpen ? 'pointer' : 'not-allowed',
+                              boxShadow: isRegistrationOpen ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none'
+                            }}
+                            disabled={!isRegistrationOpen}
                           >
-                            View & Register
+                            {isRegistrationOpen ? 'Register Now' : 'Registration Closed'}
                           </button>
                         </div>
                       </div>
@@ -765,6 +949,348 @@ function AppContent() {
                   })}
                 </div>
               )}
+
+              <div className="sections-divider" />
+
+              {/* Our Mission Section */}
+              <section style={{ marginBottom: '60px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                  <h2 className="text-gradient-ai" style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '16px' }}>Our Mission</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', maxWidth: '800px', margin: '0 auto', fontSize: '1.05rem', lineHeight: '1.7', fontWeight: '500' }}>
+                    At Arenova, we are on a mission to democratize the grand sports stadium experience. We bridge the gap between amateur sports enthusiasts and world-class championship environments, making professional-grade stadiums, premium officiating, high-quality media streaming, and structured tournament management accessible to everyone.
+                  </p>
+                </div>
+              </section>
+
+              <div className="sections-divider" />
+
+              {/* Investors & Partners continuous marquee slider */}
+              <section style={{ marginBottom: '60px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                  <h2 className="text-gradient-playful" style={{ fontSize: '1.8rem', fontWeight: '900', marginBottom: '8px' }}>Backed By & Trusted Tie-Ups</h2>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', fontWeight: '500' }}>Powering the next generation of professional amateur athletics</p>
+                </div>
+                <div className="marquee-container">
+                  <div className="marquee-content">
+                    {[1, 2].map((loopIndex) => (
+                      <React.Fragment key={loopIndex}>
+                        <div className="marquee-logo-card">
+                          <span style={{ fontWeight: '900', color: 'var(--color-primary)', fontSize: '0.95rem', letterSpacing: '0.5px' }}>⚡ NEXUS CAPITAL</span>
+                        </div>
+                        <div className="marquee-logo-card">
+                          <span style={{ fontWeight: '900', color: 'var(--color-secondary)', fontSize: '0.95rem', letterSpacing: '0.5px' }}>🏆 STADIUM ONE</span>
+                        </div>
+                        <div className="marquee-logo-card">
+                          <span style={{ fontWeight: '900', color: 'var(--color-text-primary)', fontSize: '0.95rem', letterSpacing: '0.5px' }}>🏀 ELEVATE SPORTS</span>
+                        </div>
+                        <div className="marquee-logo-card">
+                          <span style={{ fontWeight: '900', color: '#ea580c', fontSize: '0.95rem', letterSpacing: '0.5px' }}>🔥 RIDGE VENTURES</span>
+                        </div>
+                        <div className="marquee-logo-card">
+                          <span style={{ fontWeight: '900', color: '#1d4ed8', fontSize: '0.95rem', letterSpacing: '0.5px' }}>⚡ VELOCITY MEDIA</span>
+                        </div>
+                        <div className="marquee-logo-card">
+                          <span style={{ fontWeight: '900', color: '#10b981', fontSize: '0.95rem', letterSpacing: '0.5px' }}>☘️ GREEN LIGHT CO</span>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <div className="sections-divider" />
+
+              {/* Operations & Services Section */}
+              <section style={{ marginBottom: '60px', padding: '20px 0' }}>
+                <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--color-primary)', display: 'block', marginBottom: '8px' }}>Ecosystem Architecture</span>
+                  <h2 className="text-gradient-ai" style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '16px', letterSpacing: '-0.5px' }}>Operations & Services</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', maxWidth: '600px', margin: '0 auto', fontSize: '1.05rem', lineHeight: '1.6', fontWeight: '500' }}>
+                    Arenova integrates on-field physical execution with cloud tournament infrastructure to deliver a seamless league experience.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  {/* Part 1: Mobile App */}
+                  <div className="operations-box">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(0, 79, 182, 0.05)', display: 'flex', alignItems: 'center', justify: 'center', color: 'var(--color-primary)' }}>
+                        <Smartphone size={24} />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>On-Field App</span>
+                        <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: 'var(--color-text-primary)', marginTop: '2px' }}>Arenova Mobile Application</h3>
+                      </div>
+                    </div>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.98rem', lineHeight: '1.6', marginBottom: '24px' }}>
+                      Provides on-ground digital support for player performance, team management, and match referees.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', borderTop: '1px solid rgba(0, 79, 182, 0.06)', paddingTop: '24px' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <Check size={16} style={{ color: 'var(--color-secondary)', flexShrink: 0, marginTop: '4px' }} />
+                        <span><strong>Coach Modules:</strong> Digital playbook, squad coordination, and roster sheets.</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <Check size={16} style={{ color: 'var(--color-secondary)', flexShrink: 0, marginTop: '4px' }} />
+                        <span><strong>Coach Booking:</strong> Parents can book professional coaches for their children, and individual users can book for their interested sports areas.</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <Check size={16} style={{ color: 'var(--color-secondary)', flexShrink: 0, marginTop: '4px' }} />
+                        <span><strong>Performance Feedback:</strong> View detailed progress feedback, schedules, and player performance reviews direct from your coach.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Part 2: Web Platform */}
+                  <div className="operations-box">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(0, 194, 133, 0.05)', display: 'flex', alignItems: 'center', justify: 'center', color: 'var(--color-secondary)' }}>
+                        <Globe size={24} />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--color-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>Web Directory</span>
+                        <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: 'var(--color-text-primary)', marginTop: '2px' }}>Arenova Web Platform</h3>
+                      </div>
+                    </div>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.98rem', lineHeight: '1.6', marginBottom: '24px' }}>
+                      Serves as the administrative registry for league discovering, roster onboarding, and checkout.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', borderTop: '1px solid rgba(0, 194, 133, 0.06)', paddingTop: '24px' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <Check size={16} style={{ color: 'var(--color-secondary)', flexShrink: 0, marginTop: '4px' }} />
+                        <span><strong>Tournament Hub:</strong> Search and filter upcoming corporate and open division leagues.</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <Check size={16} style={{ color: 'var(--color-secondary)', flexShrink: 0, marginTop: '4px' }} />
+                        <span><strong>Proceed Registration:</strong> Streamlined online checkout for solo, pair, or squad formats.</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <Check size={16} style={{ color: 'var(--color-secondary)', flexShrink: 0, marginTop: '4px' }} />
+                        <span><strong>Gateway Clearance:</strong> Immediate secure payment handling and status receipt.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div className="sections-divider" />
+
+              {/* Submit Enquiry / Contact Us Section */}
+              <section id="contact-enquiry" style={{ marginBottom: '60px', padding: '20px 0' }}>
+                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--color-secondary)', display: 'block', marginBottom: '8px' }}>Get In Touch</span>
+                  <h2 className="text-gradient-playful" style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '16px', letterSpacing: '-0.5px' }}>Submit an Enquiry</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', maxWidth: '600px', margin: '0 auto', fontSize: '1.05rem', lineHeight: '1.6', fontWeight: '500' }}>
+                    Have questions about our tournament ecosystem or interested in custom services? Fill out the form below.
+                  </p>
+                </div>
+
+                <div className="glass-card" style={{ maxWidth: '700px', margin: '0 auto', padding: '40px', background: '#ffffff', borderRadius: 'var(--border-radius-md)' }}>
+                  {enquirySuccessMessage ? (
+                    <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                      <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                        <Check size={32} />
+                      </div>
+                      <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--color-text-primary)', marginBottom: '8px' }}>Thank You!</h3>
+                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', lineHeight: '1.6', marginBottom: '24px' }}>
+                        {enquirySuccessMessage}
+                      </p>
+                      <button onClick={() => setEnquirySuccessMessage('')} className="btn btn-outline" style={{ borderRadius: '20px', padding: '10px 20px', textTransform: 'none' }}>
+                        Send Another Enquiry
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleEnquirySubmit}>
+                      {enquiryErrorMessage && (
+                        <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: 'var(--color-error)', fontSize: '0.9rem', marginBottom: '20px', fontWeight: '600' }}>
+                          {enquiryErrorMessage}
+                        </div>
+                      )}
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label">First Name *</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            required 
+                            placeholder="John"
+                            value={enquiryData.firstName}
+                            onChange={(e) => setEnquiryData({...enquiryData, firstName: e.target.value})}
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label">Last Name *</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            required 
+                            placeholder="Doe"
+                            value={enquiryData.lastName}
+                            onChange={(e) => setEnquiryData({...enquiryData, lastName: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label">Email Address *</label>
+                          <input 
+                            type="email" 
+                            className="form-control" 
+                            required 
+                            placeholder="john.doe@example.com"
+                            value={enquiryData.email}
+                            onChange={(e) => setEnquiryData({...enquiryData, email: e.target.value})}
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label">Company (Optional)</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder="Company Name"
+                            value={enquiryData.company}
+                            onChange={(e) => setEnquiryData({...enquiryData, company: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: '20px' }}>
+                        <label className="form-label">Enquiry Category *</label>
+                        <select 
+                          className="form-control" 
+                          required
+                          value={enquiryData.serviceInterestedIn}
+                          onChange={(e) => setEnquiryData({...enquiryData, serviceInterestedIn: e.target.value})}
+                          style={{ appearance: 'auto' }}
+                        >
+                          <option value="Sports & Tournaments Enquiry">Sports & Tournaments Enquiry</option>
+                          <option value="Ticket Booking Issues">Ticket Booking Issues</option>
+                          <option value="Payment & Refund Queries">Payment & Refund Queries</option>
+                          <option value="Team & Roster Registration Support">Team & Roster Registration Support</option>
+                          <option value="Sponsorship & Partnership Support">Sponsorship & Partnership Support</option>
+                          <option value="Other Support / General Query">Other Support / General Query</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: '24px' }}>
+                        <label className="form-label">Message *</label>
+                        <textarea 
+                          className="form-control" 
+                          required 
+                          rows="4" 
+                          placeholder="Tell us about your requirements..."
+                          value={enquiryData.message}
+                          onChange={(e) => setEnquiryData({...enquiryData, message: e.target.value})}
+                          style={{ resize: 'vertical' }}
+                        ></textarea>
+                      </div>
+
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary" 
+                        disabled={isSubmittingEnquiry}
+                        style={{ width: '100%' }}
+                      >
+                        {isSubmittingEnquiry ? 'Submitting...' : 'Submit Enquiry'}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* STEP: Privacy Policy */}
+          {step === 'privacy' && (
+            <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px 0' }}>
+              <button 
+                onClick={() => { setStep('list'); window.scrollTo(0, 0); }}
+                className="btn btn-outline"
+                style={{ marginBottom: '24px', borderRadius: '20px', padding: '10px 20px', textTransform: 'none' }}
+              >
+                <ArrowLeft size={16} />
+                Back to Home Page
+              </button>
+
+              <div className="glass-card" style={{ padding: '40px', background: '#ffffff', border: '1px solid rgba(0, 79, 182, 0.08)' }}>
+                <h1 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '8px', color: 'var(--color-primary)' }}>Privacy Policy</h1>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '32px' }}>Effective Date: August 20, 2026 | Last Updated: August 20, 2026</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', color: 'var(--color-text-secondary)', fontSize: '0.95rem', lineHeight: '1.7' }}>
+                  
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>1. Introduction</h3>
+                    <p>
+                      Welcome to Arenova. We operate the Arenova web platform and mobile application. This Privacy Policy details our practices concerning the collection, use, and disclosure of information we collect from users when registering for tournaments, accessing our services, or interacting with our APIs.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>2. Information Collection and Use</h3>
+                    <p style={{ marginBottom: '12px' }}>
+                      To provide our services, facilitate tournament registration, and process payments, we collect information including, but not limited to:
+                    </p>
+                    <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <li><strong>Personal Identification Details:</strong> First name, last name, phone number, and email address.</li>
+                      <li><strong>Tournament Team Information:</strong> Roster names, team roles, and contact phone numbers of partners or teammates (with their direct consent).</li>
+                      <li><strong>Payment Information:</strong> Financial transaction IDs, payment orders, and signatures. Payment processing is handled exclusively through secure, certified gateway providers (e.g., Razorpay, Cashfree, or Stripe). We do not store credit card or bank account credentials on our servers.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>3. How We Use Collected Data</h3>
+                    <p style={{ marginBottom: '8px' }}>
+                      The gathered data is utilized for the following business-critical purposes:
+                    </p>
+                    <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <li>To process and authenticate tournament registration bookings.</li>
+                      <li>To securely settle transaction fees and verify billing records.</li>
+                      <li>To dispatch match-day updates, schedules, and league bracket positions.</li>
+                      <li>To monitor system health, audit platform logs, and enforce security policies.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>4. Data Security & Storage</h3>
+                    <p>
+                      We place high importance on the security of your data. We use industry-standard Secure Sockets Layer (SSL) transmission protocol to encrypt data streams. All personal identifiers are housed in secured cloud databases protected by firewall systems. While we deploy strict security protocols, no storage solution is 100% invulnerable; we continuously review and upgrade our defense mechanisms to protect your privacy.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>5. Information Sharing & Third-Party Disclosure</h3>
+                    <p>
+                      We do not trade, sell, or rent your personal information to third parties. We share information only with trusted service partners required to fulfill our platform operations, such as payment processors for gateway transaction verification and cloud authentication providers (like Firebase) to authenticate login sessions.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>6. Customer Rights & Consents</h3>
+                    <p>
+                      You are entitled to check, update, or request the deletion of your account files at any time. When registering team members or partner roster details, you certify that you have obtained explicit consent from each partner to provide their details on the platform.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>7. Compliance with Regulatory & Onboarding Mandates</h3>
+                    <p>
+                      This policy is designed to satisfy strict compliance frameworks demanded by payment gateways and bank card networks. It works in conjunction with our terms and conditions and refund policy rules to protect all transactions on this site.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>8. Contact Us</h3>
+                    <p>
+                      If you have questions about our handling of database records or wish to query our privacy standards, please reach out to us at:
+                      <br />
+                      <strong>Email:</strong> support@arenova.in
+                    </p>
+                  </div>
+
+                </div>
+              </div>
             </div>
           )}
 
@@ -853,7 +1379,7 @@ function AppContent() {
                   className="btn btn-secondary"
                   style={{ width: '100%', padding: '16px', fontSize: '1.1rem' }}
                 >
-                  Proceed to Roster Entry
+                  Proceed Registration
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -1522,7 +2048,7 @@ function AppContent() {
 
           {/* STEP 6: My Dashboard Page */}
           {step === 'dashboard' && (
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <button 
                   onClick={() => setStep('list')}
@@ -1541,82 +2067,167 @@ function AppContent() {
                 </button>
               </div>
 
-              <div className="glass-card" style={{ padding: '40px' }}>
-                <h2 style={{ fontSize: '1.85rem', fontWeight: '900', marginBottom: '8px' }}>My Registrations</h2>
-                <p style={{ color: 'var(--color-text-secondary)', marginBottom: '32px', fontSize: '0.95rem' }}>
-                  View all of your booked tournament slots and payment statuses.
-                </p>
-
-                {myRegistrations.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-                    <Trophy size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                    <p style={{ fontWeight: 600 }}>No tournament registrations found.</p>
-                    <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Select a tournament from the home list to register.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'start' }}>
+                
+                {/* Column 1: Detailed Profile Info */}
+                <div className="glass-card" style={{ padding: '32px', background: '#ffffff', border: '1px solid rgba(0, 79, 182, 0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', paddingBottom: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0, 79, 182, 0.08)', display: 'flex', alignItems: 'center', justify: 'center', color: 'var(--color-primary)' }}>
+                      <User size={24} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--color-text-primary)' }}>My Profile</h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Manage account details</span>
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {myRegistrations.map((r, idx) => (
-                      <div key={r._id || idx} style={{ border: '2px solid var(--color-border)', borderRadius: '14px', padding: '20px', background: '#ffffff' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
-                          <div>
-                            <h4 style={{ fontWeight: '800', color: 'var(--color-primary)', fontSize: '1.05rem' }}>
-                              Category: {r.categoryName}
-                            </h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                              Registration ID: <span style={{ fontFamily: 'monospace' }}>{r._id || r.id}</span>
-                            </p>
-                          </div>
-                          <span style={{ 
-                            padding: '4px 10px', 
-                            borderRadius: '20px', 
-                            fontSize: '0.75rem', 
-                            fontWeight: 800, 
-                            background: r.status === 'confirmed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
-                            color: r.status === 'confirmed' ? 'var(--color-success)' : 'var(--color-warning)'
-                          }}>
-                            {r.status?.toUpperCase() || 'PENDING PAYMENT'}
-                          </span>
-                        </div>
 
-                        {r.teamName && (
-                          <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
-                            <strong>Team Name:</strong> {r.teamName}
-                          </p>
-                        )}
+                  <form onSubmit={handleUpdateProfileDashboard}>
+                    <div className="form-group">
+                      <label className="form-label">Phone Number</label>
+                      <input 
+                        type="text" 
+                        value={authObj.user?.phone || 'Sync User'} 
+                        disabled 
+                        className="form-control"
+                        style={{ background: '#f8fafc', color: 'var(--color-text-muted)', cursor: 'not-allowed', border: '1px solid #e2e8f0' }}
+                      />
+                    </div>
 
-                        {r.teamMembers && r.teamMembers.length > 0 && (
-                          <div style={{ marginTop: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 700, marginBottom: '6px' }}>Roster Members:</p>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              {r.teamMembers.map((m, i) => (
-                                <span key={i} style={{ fontSize: '0.75rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', color: 'var(--color-text-secondary)' }}>
-                                  {m.name} ({m.role})
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {r.status !== 'confirmed' && (
-                          <button
-                            onClick={() => {
-                              setActiveRegistration(r);
-                              // Construct dummy order structure matching expectations
-                              setActiveOrder({ id: r.paymentOrderId || `order_${Math.random().toString(36).substr(2, 9)}` });
-                              // Use selected tournament fee or fallback
-                              setSelectedTournament({ title: 'Novare Arena Fixture', fee: 399 });
-                              setStep('payment');
-                            }}
-                            className="btn btn-secondary"
-                            style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', marginTop: '16px' }}
-                          >
-                            Pay Now
-                          </button>
-                        )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="form-group">
+                        <label className="form-label">First Name *</label>
+                        <input 
+                          type="text" 
+                          required 
+                          className="form-control" 
+                          placeholder="First name"
+                          value={profileEditForm.firstName}
+                          onChange={(e) => setProfileEditForm({ ...profileEditForm, firstName: e.target.value })}
+                        />
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="form-group">
+                        <label className="form-label">Last Name *</label>
+                        <input 
+                          type="text" 
+                          required 
+                          className="form-control" 
+                          placeholder="Last name"
+                          value={profileEditForm.lastName}
+                          onChange={(e) => setProfileEditForm({ ...profileEditForm, lastName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Email Address *</label>
+                      <input 
+                        type="email" 
+                        required 
+                        className="form-control" 
+                        placeholder="e.g. name@example.com"
+                        value={profileEditForm.email}
+                        onChange={(e) => setProfileEditForm({ ...profileEditForm, email: e.target.value })}
+                      />
+                    </div>
+
+                    {profileEditSuccess && (
+                      <div style={{ color: 'var(--color-success)', fontSize: '0.85rem', marginBottom: '16px', fontWeight: 700 }}>
+                        {profileEditSuccess}
+                      </div>
+                    )}
+                    {profileEditError && (
+                      <div style={{ color: 'var(--color-error)', fontSize: '0.85rem', marginBottom: '16px', fontWeight: 700 }}>
+                        {profileEditError}
+                      </div>
+                    )}
+
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      style={{ width: '100%', padding: '12px', borderRadius: '12px', fontSize: '0.85rem', textTransform: 'none' }}
+                      disabled={profileEditLoading}
+                    >
+                      {profileEditLoading ? 'Saving...' : 'Update Details'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Column 2: My Registrations */}
+                <div className="glass-card" style={{ padding: '32px', background: '#ffffff', border: '1px solid rgba(0, 79, 182, 0.08)' }}>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: '900', marginBottom: '8px', color: 'var(--color-text-primary)' }}>My Registrations</h2>
+                  <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', fontSize: '0.88rem' }}>
+                    View all of your booked tournament slots and payment statuses.
+                  </p>
+
+                  {myRegistrations.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+                      <Trophy size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>No tournament registrations found.</p>
+                      <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>Select a tournament from the home list to register.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {myRegistrations.map((r, idx) => (
+                        <div key={r._id || idx} style={{ border: '1px solid rgba(0, 79, 182, 0.1)', borderRadius: '14px', padding: '20px', background: '#ffffff' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                            <div>
+                              <h4 style={{ fontWeight: '800', color: 'var(--color-primary)', fontSize: '0.98rem' }}>
+                                Category: {r.categoryName}
+                              </h4>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                                Registration ID: <span style={{ fontFamily: 'monospace' }}>{r._id || r.id}</span>
+                              </p>
+                            </div>
+                            <span style={{ 
+                              padding: '4px 10px', 
+                              borderRadius: '20px', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 800, 
+                              background: r.status === 'confirmed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
+                              color: r.status === 'confirmed' ? 'var(--color-success)' : 'var(--color-warning)'
+                            }}>
+                              {r.status?.toUpperCase() || 'PENDING PAYMENT'}
+                            </span>
+                          </div>
+
+                          {r.teamName && (
+                            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
+                              <strong>Team Name:</strong> {r.teamName}
+                            </p>
+                          )}
+
+                          {r.teamMembers && r.teamMembers.length > 0 && (
+                            <div style={{ marginTop: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', fontWeight: 700, marginBottom: '6px' }}>Roster Members:</p>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {r.teamMembers.map((m, i) => (
+                                  <span key={i} style={{ fontSize: '0.72rem', background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', color: 'var(--color-text-secondary)' }}>
+                                    {m.name} ({m.role})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {r.status !== 'confirmed' && (
+                            <button
+                              onClick={() => {
+                                setActiveRegistration(r);
+                                setActiveOrder({ id: r.paymentOrderId || `order_${Math.random().toString(36).substr(2, 9)}` });
+                                setSelectedTournament({ title: 'Novare Arena Fixture', fee: 399 });
+                                setStep('payment');
+                              }}
+                              className="btn btn-secondary"
+                              style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', marginTop: '16px' }}
+                            >
+                              Pay Now
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1702,6 +2313,38 @@ function AppContent() {
                   disabled={authLoading}
                 >
                   {authLoading ? 'Sending...' : 'Send Verification OTP'}
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '20px 0 10px', color: 'var(--color-text-muted)', fontSize: '0.8rem', justifyContent: 'center' }}>
+                  <span style={{ height: '1px', background: '#e2e8f0', flex: 1 }}></span>
+                  <span>Local Development</span>
+                  <span style={{ height: '1px', background: '#e2e8f0', flex: 1 }}></span>
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const mockUser = {
+                      phone: '9876543210',
+                      firstName: 'Prospective',
+                      lastName: 'Developer',
+                      email: 'dev@arenova.in'
+                    };
+                    localStorage.setItem('arenova_auth_token', 'mock_local_auth_token');
+                    localStorage.setItem('arenova_user_data', JSON.stringify(mockUser));
+                    setAuthObj({
+                      token: 'mock_local_auth_token',
+                      refreshToken: 'mock_local_refresh_token',
+                      user: mockUser
+                    });
+                    setShowAuthModal(false);
+                    setPhoneNumber('');
+                    setOtpCode('');
+                  }}
+                  className="btn btn-outline"
+                  style={{ width: '100%', padding: '12px', borderStyle: 'dashed', borderColor: 'var(--color-primary-light)', fontSize: '0.85rem' }}
+                >
+                  Bypass with Mock Profile (Test Screens)
                 </button>
               </form>
             )}
@@ -1827,6 +2470,8 @@ function AppContent() {
             <strong>ARENOVA SPORTS STADIUM LEAGUE</strong> &copy; {new Date().getFullYear()}. All rights reserved.
           </div>
           <div style={{ display: 'flex', gap: '16px', fontWeight: 600 }}>
+            <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); setStep('privacy'); window.scrollTo(0, 0); }}>Privacy Policy</a>
+            <span>•</span>
             <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); alert("SSL billing gateway verified by Razorpay."); }}>Security Gateway</a>
             <span>•</span>
             <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); alert("Drop an email at support@arenova.in"); }}>Help & Support</a>
